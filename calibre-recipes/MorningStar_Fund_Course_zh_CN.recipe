@@ -1,0 +1,52 @@
+from calibre.web.feeds.recipes import BasicNewsRecipe
+
+
+class MorningStar_Fund_Course(BasicNewsRecipe):
+
+    title = '晨星基金课程'
+    description = '晨星投资学堂 - 基金课程'
+    cover_url = 'http://cn.morningstar.com/localization/cn/skin/default/images/home/logo.gif'
+    index_url = 'http://cn.morningstar.com/school/fund/course.aspx?level=CA00005004&section=AR00001912'
+    url_prefix = 'http://cn.morningstar.com/'
+    no_stylesheets = True
+    keep_only_tags = [{'class': 'areaOuter clearfix'}]
+
+    def get_title(self, link):
+        return link.contents[0].strip()
+
+    def get_subtitle(self, link, section):
+        index = 0
+        soup = self.index_to_soup(link)
+        div = soup.find('div', {'class': 'catalog2'})
+        titles = []
+        for sub in div.findAll('a'):
+            if '#' in sub['href']:
+                continue
+
+            index += 1
+            til = self.get_title(sub)
+            url = self.url_prefix + sub['href']
+            titles.append({'title': '{0:s}.{1:d} {2:s}'.format(section, index, til), 'url': url})
+
+        return titles
+
+    def parse_index(self):
+        soup = self.index_to_soup(self.index_url)
+        div = soup.find('div', {'class': 'catalog1'})
+
+        articles = []
+        for link in div.findAll('a'):
+            if '#' in link['href']:
+                continue
+
+            til = self.get_title(link)
+            section = til.split(' ')[0]
+            url = self.url_prefix + link['href']
+            articles.append({'title': til, 'url': url})
+            articles.extend(self.get_subtitle(url, section))
+
+        ans = [('MorningStar_Fund_Course', articles)]
+        return ans
+
+    def postprocess_html(self, soup, first_fetch):
+        return soup.find('div', {'class': 'content', 'class': 'text'})
